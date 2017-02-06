@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="one.code_staff">
+   
+   <!-- 전부 검색 -->
+   <select id="staff_all_find" resultType="one.code_staff.model.Code_StaffDTO" parameterType="Map"> <!-- DAOImple sqlMap.selectList("staff_find") 연결 -->
+<!-- 근데 여기는 중복 허용되게끔 list 출력 -->
+<!--  그래서 밑에꺼랑 맞춤 -->
+    select staff.religion_name,staff.religion_code,staff.school_name,staff.school_code,
+	staff.staff_no,staff.staff_name,staff.jumin_no,staff.graduate_day,
+	substr(xmlagg (xmlelement(col,',', staff.skill_code,staff.skill_name)order by staff.skill_code asc).extract('//text()'),2) contents
+	from   
+	(select a.skill_name,b.religion_name,b.religion_code,
+	c.school_name,c.school_code,d.staff_no,d.staff_name,d.jumin_no,d.graduate_day,e.skill_code
+	from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+	where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code and d.staff_no = e.staff_no)staff
+	<!-- 여기서 조건 where 시작되요 근데 지금 if절 밑에 and 다 붙어있어서 바꾸기 귀찮으니-->
+	where religion_code>0<!-- (조건 무조건 true)--> 
+	
+	<!-- 그리고 본 테이블이 바뀌었으니 d. e. 다지워야함. -->
+          <if test="name !='' and name !=null ">                     
+             and (staff_name like '%' ||#{name}|| '%' or 
+            religion_name  like '%' ||#{name}|| '%' or
+             school_name like '%' ||#{name}|| '%' or
+            skill_name like '%' ||#{name}|| '%')
+           </if>
+           
+           <if test="religion_code!='' and religion_code!=null">
+              and religion_code = #{religion_code}
+           </if>
+           
+           <if test="sex!='' and sex!=null">
+              <if test="sex == '1,2'"><!-- 남 여 선택했을때랑 -->
+              and (substr(jumin_no,8,1) = 1 or substr(jumin_no,8,1) = 2 )
+              </if>
+           
+              <if test="sex != '1,2'"><!-- 남 또는 여 선택했을때  -->
+              and substr(jumin_no,8,1) = #{sex}
+              </if>
+           </if> 
+           
+           <!-- 근데 밑에거를 남,여 방식으로 하게되면 -->
+           <!-- 7개네영 ㅋㅋ 근데 이렇게 말고 -->
+           <!-- (1,2,3)선택 -->
+           <!-- (1,2)선택 -->
+           <!-- (2,3)선택 -->
+           <!-- (1,3)선택 -->
+           <!-- (1)선택 -->
+           <!-- (2)선택 -->
+           <!-- (3)선택 -->
+           
+           <if test="school_code!='' and school_code!=null">
+                 <if test='school_indicator == "1"'> <!-- 한개만 선택했을때 school_code1 에 다가  선택한놈 집어넣음.(학력1개)-->
+                 and school_code = #{school_code_1}
+                 </if>
+                 <if test='school_indicator == "2"'><!-- 두개 선택했을때 school_code1,school_code2 에 다가  선택한놈 집어넣음.(학력2개)-->
+                 and (school_code = #{school_code_1} OR school_code = #{school_code_2} )
+                 </if>
+                 <if test='school_indicator == "3"'><!-- 세개 선택했을때 school_code1,school_code2,school_code3 에 다가  선택한놈 집어넣음.(학력3개)-->
+                 and (school_code = #{school_code_1} OR school_code = #{school_code_2} OR school_code = #{school_code_3} )
+                 </if>
+           </if>
+           
+           <!-- 여기도 foreach로 좀 바꿔야될거같음 -->
+           
+           <if test="skill_code!='' and skill_code!=null">
+              <if test='skill_indicator == "1"'>
+              and skill_code = #{skill_code_1}
+              </if>
+              <if test='skill_indicator == "2"'>
+              and (skill_code = #{skill_code_1} OR skill_code = #{skill_code_2})
+              </if>
+              <if test='skill_indicator == "3"'>
+              and (skill_code = #{skill_code_1} OR skill_code = #{skill_code_2} OR skill_code = #{skill_code_3})
+              </if>
+              <if test='skill_indicator == "4"'>
+              and (skill_code = #{skill_code_1} OR skill_code = #{skill_code_2} OR skill_code = #{skill_code_3} OR skill_code = #{skill_code_4})
+              </if>
+              <if test='skill_indicator == "5"'>
+              and (skill_code = #{skill_code_1} OR skill_code = #{skill_code_2} OR skill_code = #{skill_code_3} OR skill_code = #{skill_code_4} OR skill_code = #{skill_code_5})
+              </if>
+           </if>
+           
+           <if test="cal != '' and cal !=null and cal2 !='' and cal2 !=null">
+              and graduate_day between #{cal} and #{cal2}
+           </if>
+           
+		    group by staff.religion_name,staff.religion_code,staff.school_name,staff.school_code,
+			staff.staff_no,staff.staff_name,staff.jumin_no,staff.graduate_day
+			order by staff_no desc
+           
+          
+   <!--<if test="religion!='' and religion!=null">
+         and d.religion_code = #{religion}
+      </if>
+      <if test="school!='' and school!=null">
+         and d.school_code = #{school}
+      </if>
+      <if test="skill !='' and skill !=null ">
+         and e.skill_code = #{skill}
+      </if>
+      order by staff_no -->
+
+   </select>
+   
+   <!-- totalCnt -->
+   <select id="getTotalCnt" resultType="int">
+      select count(*) from 
+         staff
+   </select>
+   
+   <!-- 검색건수 토탈 -->
+   <select id="all_find_cnt" resultType="int" parameterType="Map">
+         select count(*) from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+               where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code 
+          and d.staff_no = e.staff_no
+          
+          <if test="name !='' and name !=null ">                     
+             and (d.staff_name like '%' ||#{name}|| '%' or 
+             b.religion_name  like '%' ||#{name}|| '%' or
+             c.school_name like '%' ||#{name}|| '%' or
+            a.skill_name like '%' ||#{name}|| '%')
+           </if>
+           
+           <if test="religion_code!='' and religion_code!=null">
+              and d.religion_code = #{religion_code}
+           </if> 
+           
+           <if test="sex!='' and sex!=null">
+              and substr(jumin_no,8,1) = #{sex}
+           </if>
+           
+           <if test="school_code!='' and school_code!=null">
+                 <if test='school_indicator == "1"'>
+                 and d.school_code = #{school_code_1}
+                 </if>
+                 <if test='school_indicator == "2"'>
+                 and (d.school_code = #{school_code_1} OR d.school_code = #{school_code_2} )
+                 </if>
+              
+                 <if test='school_indicator == "3"'>
+                 and (d.school_code = #{school_code_1} OR d.school_code = #{school_code_2} OR d.school_code = #{school_code_3} )
+                 </if>
+           </if>
+           
+           <if test="skill_code!='' and skill_code!=null">
+              <if test='skill_indicator == "1"'>
+              and e.skill_code = #{skill_code_1}
+              </if>
+              <if test='skill_indicator == "2"'>
+              and (e.skill_code = #{skill_code_1} OR e.skill_code = #{skill_code_2})
+              </if>
+              <if test='skill_indicator == "3"'>
+              and (e.skill_code = #{skill_code_1} OR e.skill_code = #{skill_code_2} OR e.skill_code = #{skill_code_3})
+              </if>
+              <if test='skill_indicator == "4"'>
+              and (e.skill_code = #{skill_code_1} OR e.skill_code = #{skill_code_2} OR e.skill_code = #{skill_code_3} OR e.skill_code = #{skill_code_4})
+              </if>
+              <if test='skill_indicator == "5"'>
+              and (e.skill_code = #{skill_code_1} OR e.skill_code = #{skill_code_2} OR e.skill_code = #{skill_code_3} OR e.skill_code = #{skill_code_4} OR e.skill_code = #{skill_code_5})
+              </if>
+           </if>
+           
+           
+           
+           <!-- <if test="skill_code!='' and skill_code!=null">
+              and e.skill_code = #{skill_code}
+           </if> -->
+   </select> 
+   
+   
+   
+   <!-- 전부 검색(모든직원 한번에 리스트 출력) -->
+   <select id="staff_all" resultType="one.code_staff.model.Code_StaffDTO">
+   <!-- 여기는 중복제거 해줌 -->
+	select staff.religion_name,staff.religion_code,staff.school_name,staff.school_code,
+	staff.staff_no,staff.staff_name,staff.jumin_no,staff.graduate_day,
+	substr(xmlagg (xmlelement(col,',', staff.skill_code,staff.skill_name)order by staff.skill_code asc).extract('//text()'),2) contents
+	from   
+	(select a.skill_name,b.religion_name,b.religion_code,
+	c.school_name,c.school_code,d.staff_no,d.staff_name,d.jumin_no,d.graduate_day,e.skill_code
+	from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+	where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code and d.staff_no = e.staff_no)staff
+	group by staff.religion_name,staff.religion_code,staff.school_name,staff.school_code,
+	staff.staff_no,staff.staff_name,staff.jumin_no,staff.graduate_day
+	order by staff_no desc
+   </select>  
+      
+
+ <!-- <insert id="staff_input" parameterType="one.code_staff.model.Code_StaffDTO"> -->
+   <insert id="staff_input" parameterType="one.code_staff.model.Code_StaffDTO"> 
+
+  <!-- 
+     INSERT ALL
+INTO staff
+  (staff_no,staff_name,jumin_no,school_code,
+        religion_code,graduate_day) values (staff_seq.nextval,s_staff_name,s_jumin_no,s_school_code,s_religion_code,s_graduate_day)
+INTO staff_skill
+  (staff_skill_no,staff_no,
+        skill_code) values (staff_skill_seq.nextval,staff_seq.nextval,s_skill_code)
+SELECT s_staff_name,s_jumin_no,s_school_code,s_religion_code,s_graduate_day,s_skill_code
+FROM
+( 
+    SELECT 
+      
+        #{staff_name} s_staff_name,
+        #{jumin_no} s_jumin_no,
+        #{school_code} s_school_code,
+        #{religion_code} s_religion_code,
+        #{graduate_day} s_graduate_day,
+        #{skill_code} s_skill_code
+
+    FROM dual
+)   
+ -->
+
+
+<!-- 
+  INSERT ALL
+        INTO staff
+          (staff_no,staff_name,jumin_no,school_code,
+                religion_code,graduate_day) values (staff_seq.nextval,s_staff_name,s_jumin_no,s_school_code,s_religion_code,s_graduate_day)
+        INTO staff_skill
+          (staff_skill_no,staff_no,
+                skill_code) values (staff_skill_seq.nextval,staff_seq.nextval,s_skill_code)
+        SELECT 
+        s_staff_name,s_jumin_no,s_school_code,s_religion_code,s_graduate_day,s_skill_code
+        FROM
+        ( 
+            SELECT 
+                #{staff_name} s_staff_name,
+                #{jumin_no} s_jumin_no,
+                #{school_code} s_school_code,
+                #{religion_code} s_religion_code,
+                #{graduate_day} s_graduate_day,
+                #{skill_code} s_skill_code
+            FROM dual
+        ) 
+
+ -->
+
+
+
+
+
+
+
+<!-- PL/SQL 은 기본적으로 블록(BLOCK) 구조를 가지고 있다. 블록의 기본 구성은 선언부(DECLARE), 실행부(BEGIN), 예외처리부(EXCEPTION)로 구성 -->
+DECLARE  <!-- (선언부)모든 변수나 상수를 선언하는 부분 -->
+   y NUMBER := staff_seq.nextval; <!-- int staff_seq.nextval, 포문 돌리면 시퀀스 자꾸늘어나서 y로 선언(고정된 값이 되버려서 1개만 선택할때는 y를 안쓰니깐 상관없고 여러개 선택했을 때는 y값이 고정되지 않으면 반복문이라 시퀀스가 늘어난다) -->
+   num NUMBER := #{count}; 
+   str VARCHAR(20) := #{rawstr};   
+BEGIN <!-- (실행부) 제어문, 반복문, 함수정의 등의 로직을 기술함 (실행)  -->
+    IF num =1 THEN <!-- IF 조건_1 THEN 명령문_1  ELSIF 조건_2 THEN 명령문_2 ELSIF 조건_3 THEN 명령문_3 ... ELSE 명령문_n END IF; -->
+        INSERT ALL <!-- 여러개의 INSERT 문을 한버에 처리 INSERT ALL INTO table (column1, column2) VALUES (value1, value2) INTO table (column1, column2) VALUES (value1, value2) SELECT * FROM DUAL; -->
+        INTO staff
+          (staff_no,staff_name,jumin_no,school_code,
+                religion_code,graduate_day) values (staff_seq.nextval,s_staff_name,s_jumin_no,s_school_code,s_religion_code,s_graduate_day)
+        INTO staff_skill
+          (staff_skill_no,staff_no,
+                skill_code) values (staff_skill_seq.nextval,staff_seq.nextval,s_skill_code)
+        SELECT 
+        s_staff_name,s_jumin_no,s_school_code,s_religion_code,s_graduate_day,s_skill_code
+        FROM
+        ( 
+            SELECT 
+                #{staff_name} s_staff_name,
+                #{jumin_no} s_jumin_no,
+                #{school_code} s_school_code,
+                #{religion_code} s_religion_code,
+                #{graduate_day} s_graduate_day,
+                #{skill_code} s_skill_code
+            FROM dual
+        ); 
+        ELSE
+        
+        INSERT INTO staff VALUES (y,#{staff_name},#{jumin_no},#{school_code},#{religion_code},#{graduate_day});
+        <!--  FOR 변수 IN 초기값..최종값 LOOP 명령문1; 명령문2;...명령문N; END LOOP; -->
+         FOR i IN 1..num LOOP <!-- 4개 선택하면 1..4 가되어야되고,1부터 4까지 4번 반복 문   -->
+           INSERT INTO staff_skill VALUES (staff_skill_seq.nextval,y, SUBSTR(str, (i-1)*2+1, 1)); 
+          END LOOP;<!-- SUBSTR(str, (i-1)*2+1, 1)의미-> 1,4,5일때 1하고 4하고 5를 뽑아서 반복문을 돌때마다   INSERT INTO staff_skill VALUES로 넣어줌,  예륻들면 4개 선택했을떄 4번 돌면서 넣는다.-->    
+      END IF;
+END;
+<!-- EXCEPTION(예외처리부) 실행 도중 에러 발생시 해결하는 문장들을 기술 , 예외 처리부는 경우에 따라 생략 가능 / 단 실행부는 반드시 있어야 함 -->
+<!-- 그래서 count 는 sql 들어오기전에 자바에서 몇개 잇는지 계산해서 넘겨주고 rawstr는 1,4,5 선택햇으면 skill_code_buffer, 를 그냥 가공 안하고 raw상태로 넘겨줫다는 뜻
+	 sql안에서 가공(원래 컨트롤러 에 들어갈 공식)
+				for(int j=1;j<skill_code_buffer.length();j++){
+                arr_addString.add(skill_code_buffer.substring((j-1)*2, (j-1)*2+1));} -->
+
+</insert>  
+
+<!-- staff_no로 사원정보 출력 -->
+<select id="staff_updel" parameterType="int" resultType="one.code_staff.model.Code_StaffDTO">
+	 	<!--  select * from
+		staff
+		where
+		staff_no=#{staff_no}-->
+		
+<!-- select a.*,b.*,c.*,d.*,substr(jumin_no,8,1) jumin,e.* from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+               where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code 
+          and d.staff_no = e.staff_no and d.staff_no = #{staff_no}-->
+    select staff.religion_name,staff.religion_code,staff.school_name,staff.school_code,
+	staff.staff_no,staff.staff_name,staff.jumin_no,staff.graduate_day,
+	substr(xmlagg (xmlelement(col,',', staff.skill_code)order by staff.skill_code asc).extract('//text()'),2) contents
+	from   
+	(select a.skill_name,b.religion_name,b.religion_code,
+	c.school_name,c.school_code,d.staff_no,d.staff_name,d.jumin_no,d.graduate_day,e.skill_code
+	from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+	where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code and d.staff_no = e.staff_no and
+	e.staff_no = #{staff_no})staff
+	group by staff.religion_name,staff.religion_code,staff.school_name,staff.school_code,
+	staff.staff_no,staff.staff_name,staff.jumin_no,staff.graduate_day
+	order by staff_no desc
+</select>
+
+
+<!-- 수정하기  -->
+ <update id="staff_update" parameterType="one.code_staff.model.Code_StaffDTO">
+	update
+	(select a.*,b.*,c.*,d.*,substr(jumin_no,8,1) jumin,e.* from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+               where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code 
+          and d.staff_no = e.staff_no)
+	set
+		d.staff_name 
+</update> 
+
+
+<!-- 
+select a.*,b.*,c.*,d.*,substr(jumin_no,8,1) jumin,e.* from
+ code_skill a,code_religion b,code_school c, staff d, staff_skill e
+               where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code 
+          and d.staff_no = #{staff_no}
+ -->
+   
+   
+   <!-- 삭제하기 테스트 -->
+   
+   <delete id="staffdel">
+   delete from staff where staff_no = #{staff_no}   
+   </delete>
+   <delete id="schooldel">
+   delete from (select a.*,b.*,c.*,d.*,e.* from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+               where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code 
+          and d.staff_no = e.staff_no and d.staff_no=#{staff_no}) 
+   </delete>
+
+
+   
+   
+   
+   
+   
+   
+   
+   <!-- test -->
+<select id="a" resultType="one.code_staff.model.Code_StaffDTO" parameterType="Map">
+      select * from code_skill a,code_religion b,code_school c, staff d, staff_skill e
+               where  b.religion_code=d.religion_code and c.school_code=d.school_code and a.skill_code=e.skill_code 
+          and d.staff_no = e.staff_no
+          <if test="staff_name !='' and staff_name !=null ">                     
+             and (d.staff_name like '%' ||#{staff_name}|| '%' or 
+             b.religion_name  like '%' ||#{staff_name}|| '%' or
+             c.school_name like '%' ||#{staff_name}|| '%' or
+            a.skill_name like '%' ||#{staff_name}|| '%') 
+           </if> 
+
+</select> 
+<insert id="b" parameterType="one.code_staff.model.Code_StaffDTO">
+   insert
+      into
+   staff
+      values(staff_seq.nextval,
+      #{staff_name},
+      #{jumin_no},
+      #{school_code},
+      #{religion_code},
+      #{graduate_day})
+</insert>
+<insert id="c" parameterType="Map">
+   insert
+      into
+   staff_skill
+      values(staff_skill_seq.nextval,
+      #{staff_no},
+      #{skill_code})
+</insert>
+   
+   
+</mapper>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+   xmlns:context="http://www.springframework.org/schema/context"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.springframework.org/schema/beans 
+         http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context
+         http://www.springframework.org/schema/context/spring-context.xsd">
+
+	
+	<!-- configs -->
+	<context:component-scan base-package="one" use-default-filters="false">
+      <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+   </context:component-scan>
+	<bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor"/>
+	<!-- 용량설정도 해줘야한다.  -1은 무제한을 의미 100메가를 지원하고 싶다면 1024*100=104857600-->
+ 	 <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+      <property name="maxUploadSize">
+         <value>104857600</value><!-- -1은 무제한의미 -->
+      </property>
+   </bean>
+   
+   
+   <!-- service -->
+   
+   <bean id="code_staffDao" class="one.code_staff.model.Code_StaffDAOImple">
+   	<constructor-arg>
+   		<ref bean="sqlSessionTemplate"/>
+   	</constructor-arg>
+   </bean>
+   
+<!--  이건 없어도 댈듯.. 우리 자동주입되는걸로 배웟 -->
+   
+<!--    <bean id="memoDao" class="yong.memo.model.MemoDAOImple"/>
+	<bean id="memberDao" class="yong.member.model.MemberDAOImple"/>
+	
+	<bean id="empDao" class="yong.emp.model.EmpDAOImple">
+		<constructor-arg>
+			<ref bean="sqlSessionTemplate"/>
+		</constructor-arg>
+	</bean> -->
+   
+   <!-- Json -->
+
+   <bean id="khJson"
+      class="org.springframework.web.servlet.view.json.MappingJacksonJsonView"></bean>
+   
+   
+   <!-- controller -->
+   
+   
+   
+   <!-- 폴더지정, .jsp   반복적으로 상용되는 것들 간략하게 -->
+<!-- 	<bean id="down" class="yong.view.DownloadView"></bean> -->
+	
+	<!-- 제이슨 추가 
+	<bean id="yongJson" class="org.springframework.web.servlet.view.json.MappingJacksonJsonView"></bean>-->
+		
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/"></property>
+		<property name="suffix" value=".jsp"></property>
+		<property name="order" value="1"></property>
+		<property name="contentType" value="text/html; charset=UTF-8" />
+	</bean>
+	<bean class="org.springframework.web.servlet.view.BeanNameViewResolver">
+		<property name="order" value="0"/>
+	</bean>
+	
+	<!-- 설정은 암기하지 말고 복붙하기 -->
+   <!-- 1.dataSource -->
+   <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+      <property name="driverClassName" value="oracle.jdbc.driver.OracleDriver"/>
+      <property name="url" value="jdbc:oracle:thin:@localhost:1521:orcl"/>
+      <property name="username" value="scott"/>
+      <property name="password" value="1234"/>
+   </bean>
+   
+   <!-- 2. 트랜잭션관리자 등록 -->
+   <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+      <property name="dataSource" ref="dataSource"/>
+   </bean>
+   
+   <!-- 3. 마이바티스 설정 -->
+   <bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+      <property name="dataSource" ref="dataSource"/>
+      <property name="configLocation" value="classpath:/mybatis-config.xml"/> <!-- src를 가르킴 -->
+   </bean>
+   <bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+      <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactoryBean"></constructor-arg>
+   </bean>
+   
+   </beans>
